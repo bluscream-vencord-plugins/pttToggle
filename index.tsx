@@ -1,3 +1,5 @@
+// Authors: Bluscream, Cursor.AI
+// Created at 2026-01-01 04:57:55
 /*
  * Equicord Plugin
  * Adds a push-to-talk toggle checkbox to the microphone button context menu
