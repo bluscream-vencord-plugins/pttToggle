@@ -8,20 +8,32 @@ Adds a push-to-talk toggle checkbox to the microphone button context menu next t
 - Visual checkbox indicator showing current PTT state
 - Instant mode switching without navigating to settings
 
-## Installation
 
-1. Enable the plugin in Vencord's settings
-2. Right-click the microphone button in Discord
-3. Use the "Push to Talk" checkbox to toggle PTT mode
 
-## Usage
 
-Right-click the microphone button in Discord's user area to open the context menu. You'll see a "Push to Talk" checkbox option that allows you to quickly toggle between push-to-talk and voice activity detection modes. The checkbox will show a checkmark when push-to-talk is enabled.
 
-## AI Disclaimer
 
-This plugin was developed with assistance from **Cursor.AI** (Cursor's AI coding assistant). The AI was used to help with code generation, debugging, documentation, and implementation. While AI assistance was utilized, all code and features were reviewed and tested to ensure quality and functionality.
 
-## License
+## Installation 
 
-Unlicense
+### 🪄 Installation Wizard
+The easiest way to install this plugin is to use the **[Plugin Installer Generator](https://bluscream-vencord-plugins.github.io)**. 
+Simply select this plugin from the list and download your custom install script.
+
+### 💻 Manual Installation (PowerShell)
+Alternatively, you can run this snippet in your Equicord/Vencord source directory:
+```powershell
+$ErrorActionPreference = "Stop"
+winget install -e --id Git.Git
+winget install -e --id OpenJS.NodeJS
+npm install -g pnpm
+git clone https://github.com/Equicord/Equicord Equicord
+New-Item -ItemType Directory -Force -Path "Equicord\src\userplugins" | Out-Null
+git clone https://github.com/bluscream-vencord-plugins/blu-pttToggle.git -b "main" "Equicord\src\userplugins\blu-pttToggle"
+cd "Equicord"
+npm install -g pnpm
+pnpm install --frozen-lockfile
+pnpm build
+pnpm buildWeb
+pnpm inject
+```
