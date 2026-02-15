@@ -8,6 +8,12 @@
 import definePlugin from "@utils/types";
 import { MediaEngineStore, FluxDispatcher } from "@webpack/common";
 
+import { Logger } from "@utils/Logger";
+
+const pluginId = "pttToggle";
+const pluginName = "Push To Talk Toggle";
+const logger = new Logger(pluginName, "#7289da");
+
 const INPUT_MODE_PTT = "PUSH_TO_TALK";
 const INPUT_MODE_VAD = "VOICE_ACTIVITY";
 
@@ -68,7 +74,7 @@ function createCheckboxIcon(isChecked: boolean): SVGElement {
 }
 
 export default definePlugin({
-    name: "PTTToggle",
+    name: pluginName,
     description: "Adds a push-to-talk toggle checkbox to the microphone button context menu next to Input Profile",
     authors: [{ name: "Bluscream", id: 467777925790564352n }, { name: "Cursor.AI", id: 0n }],
 
@@ -119,7 +125,7 @@ export default definePlugin({
 
             const isPTT = getInputMode() === INPUT_MODE_PTT;
             let iconContainer = toggleContainer.querySelector('[class*="iconContainer"]') as HTMLElement;
-            
+
             if (!iconContainer) {
                 iconContainer = document.createElement('div');
                 iconContainer.className = 'c1e9c47c23f12ca3-iconContainer';
@@ -161,7 +167,7 @@ export default definePlugin({
                 e.preventDefault();
                 e.stopPropagation();
                 toggleInputMode();
-                
+
                 setTimeout(() => {
                     updateCheckbox(getInputMode() === INPUT_MODE_PTT);
                     const escapeEvent = new KeyboardEvent('keydown', {
@@ -176,7 +182,7 @@ export default definePlugin({
             });
 
             if (!parent) return;
-            
+
             if (inputProfileContainer.nextSibling) {
                 parent.insertBefore(toggleContainer, inputProfileContainer.nextSibling);
             } else {
