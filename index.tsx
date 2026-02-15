@@ -1,23 +1,21 @@
-// Authors: Bluscream, Cursor.AI
-// Created at 2026-01-01 04:57:55
-/*
- * Equicord Plugin
- * Adds a push-to-talk toggle checkbox to the microphone button context menu
- */
-
 import definePlugin from "@utils/types";
 import { MediaEngineStore, FluxDispatcher } from "@webpack/common";
-
 import { Logger } from "@utils/Logger";
+import type { VoiceMode } from "@vencord/discord-types";
 
-const pluginId = "pttToggle";
-const pluginName = "Push To Talk Toggle";
-const logger = new Logger(pluginName, "#7289da");
+export const pluginInfo = {
+    id: "pttToggle",
+    name: "Push To Talk Toggle",
+    description: "Adds a push-to-talk toggle checkbox to the microphone button context menu next to Input Profile",
+    color: "#7289da"
+};
 
-const INPUT_MODE_PTT = "PUSH_TO_TALK";
-const INPUT_MODE_VAD = "VOICE_ACTIVITY";
+const logger = new Logger(pluginInfo.name, pluginInfo.color);
 
-function getInputMode(): string {
+const INPUT_MODE_PTT: VoiceMode = "PUSH_TO_TALK";
+const INPUT_MODE_VAD: VoiceMode = "VOICE_ACTIVITY";
+
+function getInputMode(): VoiceMode {
     try {
         const state = (MediaEngineStore as any).getState?.();
         return state?.settingsByContext?.default?.mode || INPUT_MODE_VAD;
@@ -74,7 +72,7 @@ function createCheckboxIcon(isChecked: boolean): SVGElement {
 }
 
 export default definePlugin({
-    name: pluginName,
+    name: "Push To Talk Toggle",
     description: "Adds a push-to-talk toggle checkbox to the microphone button context menu next to Input Profile",
     authors: [{ name: "Bluscream", id: 467777925790564352n }, { name: "Cursor.AI", id: 0n }],
 
