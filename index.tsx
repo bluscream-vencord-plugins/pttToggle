@@ -1,20 +1,31 @@
+//// Plugin originally written for Equicord at 2026-02-16 by https://github.com/Bluscream, https://antigravity.google
+// region Imports
 import definePlugin from "@utils/types";
 import { MediaEngineStore, FluxDispatcher } from "@webpack/common";
 import { Logger } from "@utils/Logger";
 import type { VoiceMode } from "@vencord/discord-types";
+// endregion Imports
 
+// region PluginInfo
 export const pluginInfo = {
     id: "pttToggle",
-    name: "Push To Talk Toggle",
-    description: "Adds a push-to-talk toggle checkbox to the microphone button context menu next to Input Profile",
-    color: "#7289da"
+    name: "PttToggle",
+    description: "Adds a push-to-talk toggle checkbox to the microphone button context menu",
+    color: "#7289da",
+    authors: [
+        { name: "Bluscream", id: 467777925790564352n },
+        { name: "Assistant", id: 0n }
+    ],
 };
+// endregion PluginInfo
 
-const logger = new Logger(pluginInfo.name, pluginInfo.color);
-
+// region Variables
+const logger = new Logger(pluginInfo.id, pluginInfo.color);
 const INPUT_MODE_PTT: VoiceMode = "PUSH_TO_TALK";
 const INPUT_MODE_VAD: VoiceMode = "VOICE_ACTIVITY";
+// endregion Variables
 
+// region Utils
 function getInputMode(): VoiceMode {
     try {
         const state = (MediaEngineStore as any).getState?.();
@@ -70,11 +81,13 @@ function createCheckboxIcon(isChecked: boolean): SVGElement {
 
     return svg;
 }
+// endregion Utils
 
+// region Definition
 export default definePlugin({
-    name: "Push To Talk Toggle",
-    description: "Adds a push-to-talk toggle checkbox to the microphone button context menu next to Input Profile",
-    authors: [{ name: "Bluscream", id: 467777925790564352n }, { name: "Cursor.AI", id: 0n }],
+    name: pluginInfo.name,
+    description: pluginInfo.description,
+    authors: pluginInfo.authors,
 
     start() {
         const observer = new MutationObserver(() => {
@@ -195,3 +208,4 @@ export default definePlugin({
         document.querySelector('#audio-device-context-ptt-toggle')?.remove();
     }
 });
+// endregion Definition

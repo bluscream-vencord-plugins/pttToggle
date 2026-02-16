@@ -1,7 +1,7 @@
 {
     "name": "pttToggle",
     "version": "1.0.0",
-    "description": "Push To Talk Toggle",
+    "description": "Adds a push-to-talk toggle checkbox to the microphone button context menu",
     "main": "index.tsx",
     "author": {
         "name": "Bluscream",
@@ -10,7 +10,7 @@
     "license": "GPL-3.0-or-later",
     "repository": {
         "type": "git",
-        "url": "https://github.com/bluscream-vencord-plugins/blu-pttToggle.git"
+        "url": "https://github.com/bluscream-vencord-plugins/pttToggle.git"
     },
     "vencord": {
         "plugin": true,
