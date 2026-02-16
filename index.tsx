@@ -6,18 +6,8 @@ import { Logger } from "@utils/Logger";
 import type { VoiceMode } from "@vencord/discord-types";
 // endregion Imports
 
-// region PluginInfo
-export const pluginInfo = {
-    id: "pttToggle",
-    name: "PttToggle",
-    description: "Adds a push-to-talk toggle checkbox to the microphone button context menu",
-    color: "#7289da",
-    authors: [
-        { name: "Bluscream", id: 467777925790564352n },
-        { name: "Assistant", id: 0n }
-    ],
-};
-// endregion PluginInfo
+import { pluginInfo } from "./info";
+export { pluginInfo };
 
 // region Variables
 const logger = new Logger(pluginInfo.id, pluginInfo.color);
