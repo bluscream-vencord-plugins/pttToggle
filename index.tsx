@@ -5,7 +5,7 @@ import { MediaEngineStore, FluxDispatcher } from "@webpack/common";
 import { Logger } from "@utils/Logger";
 import type { VoiceMode } from "@vencord/discord-types";
 import { definePluginSettings } from "@api/Settings";
-import { OptionType } from "@utils/types";
+import { OptionType, makeRange } from "@utils/types";
 // endregion Imports
 
 import { pluginInfo } from "./info";
@@ -26,11 +26,64 @@ const settings = definePluginSettings({
         type: OptionType.BOOLEAN,
         description: "Show Krisp toggle in Audio Device Context Menu",
         default: true
+    },
+    syncAutoThreshold: {
+        type: OptionType.BOOLEAN,
+        description: "Toggle automatic voice detection when toggling Krisp",
+        default: true
+    },
+    krispOffThreshold: {
+        type: OptionType.SLIDER,
+        description: "Manual voice detection threshold when Krisp is OFF",
+        default: -100,
+        markers: makeRange(-100, 0, 10),
+        stickToMarkers: false
+    },
+    debug: {
+        type: OptionType.BOOLEAN,
+        description: "Enable debug logging",
+        default: false
+    },
+    cachedThreshold: {
+        type: OptionType.NUMBER,
+        description: "Cached manual voice detection threshold",
+        default: -75,
+        hidden: true
     }
 });
 // endregion Variables
 
 // region Utils
+function setVoiceModeOptions(options: { autoThreshold?: boolean; threshold?: number; }) {
+    if (settings.store.debug) console.log("[pttToggle] setVoiceModeOptions called", options);
+    try {
+        const AudioActions = Vencord.Webpack.findByProps("setMode");
+        const currentMode = (MediaEngineStore as any).getMode?.() || "VOICE_ACTIVITY";
+        const currentOptions = (MediaEngineStore as any).getModeOptions?.() || {};
+
+        if (AudioActions && AudioActions.setMode) {
+            AudioActions.setMode(currentMode, { ...currentOptions, ...options }, "default", { analyticsLocations: [] });
+        } else {
+            FluxDispatcher.dispatch({
+                type: "AUDIO_SET_MODE",
+                context: "default",
+                mode: currentMode,
+                options: { ...currentOptions, ...options }
+            });
+        }
+    } catch (e) {
+        console.error("[pttToggle] Error in setVoiceModeOptions:", e);
+    }
+}
+
+function setAutoThreshold(enabled: boolean) {
+    setVoiceModeOptions({ autoThreshold: enabled });
+}
+
+function setThreshold(threshold: number) {
+    setVoiceModeOptions({ threshold });
+}
+
 function getInputMode(): VoiceMode {
     try {
         const state = (MediaEngineStore as any).getState?.();
@@ -41,10 +94,12 @@ function getInputMode(): VoiceMode {
 }
 
 function toggleInputMode() {
+    if (settings.store.debug) console.log("[pttToggle] toggleInputMode called");
     const currentMode = getInputMode();
     const newMode = currentMode === INPUT_MODE_PTT ? INPUT_MODE_VAD : INPUT_MODE_PTT;
     const state = (MediaEngineStore as any).getState?.() || {};
 
+    if (settings.store.debug) console.log(`[pttToggle] Switching mode from ${currentMode} to ${newMode}`);
     FluxDispatcher.dispatch({
         type: "AUDIO_SET_MODE",
         context: "default",
@@ -55,41 +110,86 @@ function toggleInputMode() {
 
 function getKrispMode(): boolean {
     try {
-        const state = (MediaEngineStore as any).getState?.();
-        return state?.noiseCancellation ?? false;
+        return (MediaEngineStore as any).getNoiseCancellation?.() ?? false;
     } catch {
         return false;
     }
 }
 
 function toggleKrispMode() {
-    const state = (MediaEngineStore as any).getState?.() || {};
-    const currentMode = state?.settingsByContext?.default?.mode || "VOICE_ACTIVITY";
-    const currentOptions = state?.settingsByContext?.default?.modeOptions || {};
-
+    if (settings.store.debug) console.log("[pttToggle] toggleKrispMode called");
     const isKrisp = getKrispMode();
     const newKrispState = !isKrisp;
+    if (settings.store.debug) console.log(`[pttToggle] Toggling Krisp: ${isKrisp} -> ${newKrispState}`);
 
-    FluxDispatcher.dispatch({
-        type: "AUDIO_SET_MODE",
-        context: "default",
-        mode: currentMode,
-        options: {
-            ...currentOptions,
-            autoThreshold: newKrispState
+    const location = { page: "User Settings", section: "Voice & Video" };
+
+    try {
+        const AudioActions = Vencord.Webpack.findByProps("setNoiseCancellation", "setNoiseSuppression");
+
+        // 1. Sync Mode Options (Auto Sensitivity and Threshold)
+        const currentOptions = (MediaEngineStore as any).getModeOptions?.() || {};
+        const options: { autoThreshold?: boolean; threshold?: number; } = {};
+
+        if (settings.store.syncAutoThreshold) {
+            options.autoThreshold = newKrispState;
         }
-    });
 
-    FluxDispatcher.dispatch({
-        type: "AUDIO_SET_NOISE_CANCELLATION",
-        enabled: newKrispState,
-        location: { page: "User Settings", section: "Voice & Video" }
-    });
-    FluxDispatcher.dispatch({
-        type: "AUDIO_SET_NOISE_SUPPRESSION",
-        enabled: !newKrispState,
-        location: { page: "User Settings", section: "Voice & Video" }
-    });
+        if (!newKrispState) {
+            // Switching Krisp OFF -> Cache current and set to user defined level
+            if (settings.store.debug) console.log(`[pttToggle] Caching current threshold: ${currentOptions.threshold}`);
+            settings.store.cachedThreshold = currentOptions.threshold;
+            options.threshold = settings.store.krispOffThreshold;
+        } else {
+            // Switching Krisp ON -> Restore cached threshold
+            if (settings.store.debug) console.log(`[pttToggle] Restoring cached threshold: ${settings.store.cachedThreshold}`);
+            options.threshold = settings.store.cachedThreshold;
+        }
+
+        setVoiceModeOptions(options);
+
+        // 2. Sync Noise Cancellation/Suppression
+        if (AudioActions) {
+            if (newKrispState) {
+                // Switching to Krisp
+                if (settings.store.debug) console.log("[pttToggle] Calling native setNoiseCancellation(true)");
+                AudioActions.setNoiseCancellation(true, location);
+            } else {
+                // Switching to None
+                if (settings.store.debug) console.log("[pttToggle] Calling native setNoiseCancellation(false)");
+                AudioActions.setNoiseCancellation(false, location);
+                if (settings.store.debug) console.log("[pttToggle] Calling native setNoiseSuppression(false)");
+                AudioActions.setNoiseSuppression(false, location);
+            }
+        } else {
+            console.warn("[pttToggle] AudioActions not found! Falling back to raw dispatch.");
+            if (newKrispState) {
+                FluxDispatcher.dispatch({
+                    type: "AUDIO_SET_NOISE_CANCELLATION",
+                    enabled: true,
+                    location
+                });
+                FluxDispatcher.dispatch({
+                    type: "AUDIO_SET_NOISE_SUPPRESSION",
+                    enabled: false,
+                    location
+                });
+            } else {
+                FluxDispatcher.dispatch({
+                    type: "AUDIO_SET_NOISE_CANCELLATION",
+                    enabled: false,
+                    location
+                });
+                FluxDispatcher.dispatch({
+                    type: "AUDIO_SET_NOISE_SUPPRESSION",
+                    enabled: false,
+                    location
+                });
+            }
+        }
+    } catch (e) {
+        console.error("[pttToggle] Error toggling Krisp natively:", e);
+    }
 }
 
 function createCheckboxIcon(isChecked: boolean): SVGElement {
@@ -239,9 +339,22 @@ export default definePlugin({
                 MediaEngineStore.addChangeListener(storeListener);
 
                 toggleContainer.addEventListener('click', (e) => {
+                    if (settings.store.debug) console.log(`[pttToggle] Toggle clicked: ${id}`);
                     e.preventDefault();
                     e.stopPropagation();
                     onToggle();
+
+                    if (settings.store.debug) console.log(`[pttToggle] Dispatching Escape key to close menu for: ${id}`);
+                    setTimeout(() => {
+                        const escapeEvent = new KeyboardEvent('keydown', {
+                            key: 'Escape',
+                            code: 'Escape',
+                            keyCode: 27,
+                            bubbles: true,
+                            cancelable: true
+                        });
+                        document.dispatchEvent(escapeEvent);
+                    }, 50);
                 });
 
                 // Cleanup listener when the toggle is removed from DOM
